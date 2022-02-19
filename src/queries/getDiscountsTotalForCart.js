@@ -1,3 +1,5 @@
+import ReactionError from "@reactioncommerce/reaction-error";
+
 /**
  * @summary Calculates total discount amount for a cart based on all discounts
  *   that have been applied to it
@@ -17,13 +19,16 @@ export default async function getDiscountsTotalForCart(context, cart) {
     if (!data || !data.discountId) return null;
 
     const discount = await Discounts.findOne({ _id: data.discountId });
+
+    if (!discount) throw new ReactionError("not-found", "Discount not found");
+
     const calculation = discount && discount.calculation && discount.calculation.method;
     if (!calculation) return null;
 
     const funcs = context.getFunctionsOfType(`discounts/${processor}s/${calculation}`); // note the added "s"
     if (funcs.length === 0) throw new Error(`No functions of type "discounts/${processor}s/${calculation}" have been registered`);
 
-    const amount = await funcs[0](cart._id, discount._id, collections);
+    const amount = await funcs[0](cart, discount);
     return { discountId: data.discountId, amount };
   }));
 
